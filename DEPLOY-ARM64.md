@@ -28,13 +28,24 @@ DEPLOY-ARM64.md 是说明文件，不参与构建。
 pvlane-arm64-image。GitHub 下载时提供 ZIP 包，先解压，得到：
 
 ```text
-pvlane-arm64.tar.gz
-pvlane-arm64.tar.gz.sha256
+pvlane-arm64.tar
+pvlane-arm64.tar.sha256
 ```
 
-其中 tar.gz 是包含所有运行层的 Docker 镜像归档，内置镜像标签为 pvlane:arm64。
+其中 .tar 是未经过 gzip 压缩、包含所有运行层的 Docker 镜像归档，内置镜像标签为 pvlane:arm64。
+解压外层 ZIP 后即可取得 .tar，不要继续解包 .tar 内的文件。
 本示例的 Artifact 保留 14 天，实际也受仓库/组织策略约束，请在到期前下载保存。
 这是工作流运行记录中的下载附件，不会自动创建 GitHub Release。
+
+## 飞牛界面导入
+
+将 pvlane-arm64.tar 上传至飞牛设备，在 Docker 的镜像导入界面选择该 .tar 文件。
+导入完成后，使用本地镜像 pvlane:arm64 创建容器，将主机 8080 端口映射到容器 80 端口。
+镜像标签可能在界面中分开显示为镜像名称 pvlane、标签 arm64。
+此工作流生成的是 ARM64 镜像，设备的处理器必须为 ARM64。
+
+若已有旧版 pvlane-arm64.tar.gz，只需解开 gzip 这一层得到 pvlane-arm64.tar 后导入，
+不用重新构建。不要仅将 .tar.gz 重命名为 .tar，也不要继续解包 .tar 中的镜像文件。
 
 ## ARM64 服务器导入运行
 
@@ -43,10 +54,10 @@ pvlane-arm64.tar.gz.sha256
 
 ```sh
 # 可选：检查文件传输是否完整。
-sha256sum -c pvlane-arm64.tar.gz.sha256
+sha256sum -c pvlane-arm64.tar.sha256
 
-# Docker 可直接加载 gzip 压缩的镜像归档，无需先解压 tar.gz。
-docker load -i pvlane-arm64.tar.gz
+# 从未压缩的 TAR 镜像归档导入。
+docker load -i pvlane-arm64.tar
 
 # 使用已导入的本地镜像启动，不访问镜像仓库。
 docker compose up -d --pull never
@@ -77,7 +88,7 @@ localhost 的 HTTP 通常可作为本机调试例外。
 下载新一轮构建的 Artifact，解压并复制到服务器，检查校验和后执行：
 
 ```sh
-docker load -i pvlane-arm64.tar.gz
+docker load -i pvlane-arm64.tar
 docker compose up -d --pull never --force-recreate
 ```
 
@@ -92,6 +103,10 @@ QEMU。以后如果在目标平台阶段增加 RUN 指令，则需要原生 ARM 
 ELECTRON_SKIP_BINARY_DOWNLOAD=1 仅跳过 Electron 桌面运行时下载；仍保留 Vite、
 TypeScript 等网页构建需要的开发依赖。npm run build 会自动先执行 prebuild，
 复制 PDF.js 的 cmaps、standard_fonts 和 wasm，不能仅手动执行 vite build 替代。
+
+不要在 .dockerignore 中排除 test-fixtures。当前 tsconfig.json 会检查 src 下的测试文件，
+其中 location-shadow.test.ts 引用了 test-fixtures/solar-spa-reference.json；该文件必须进入
+构建上下文。最终 Nginx 镜像只复制 dist，因此保留测试数据不会将其作为源码带入运行镜像。
 
 工作流使用 type=docker 导出可被 docker load 导入的单平台镜像归档。
 如需同时提供 x86 镜像，应按平台分别构建、导出不同文件；不要直接在当前导出配置中
@@ -108,4 +123,6 @@ docker compose logs --tail=50
 镜像架构输出应为 linux/arm64。通过 HTTPS 在 Chrome/Edge 检查页面、3D、PDF 底图导入、
 项目保存和报告保存。项目 JSON 应保存到浏览器使用者本机。
 
-本示例经过项目源码与配置审查，尚未实际执行 Docker 构建或 GitHub Actions。
+已使用失败构建对应的提交 9ca853e0f4dfa8c0f585dbeae2275bfd4085a549，
+在本地 Windows / Node.js 24 环境执行 npm ci 和 npm run build，TypeScript 检查与
+Vite 生产构建均通过。当前环境没有 Docker，尚未验证完整镜像构建或新的 GitHub Actions 运行。
