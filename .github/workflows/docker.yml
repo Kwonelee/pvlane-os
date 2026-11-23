@@ -31,13 +31,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Compress image and create checksum
+      - name: Prepare TAR image and create checksum
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/pvlane-artifact"
-          gzip -1 -c "$RUNNER_TEMP/pvlane-arm64.tar" > "$RUNNER_TEMP/pvlane-artifact/pvlane-arm64.tar.gz"
+          mv "$RUNNER_TEMP/pvlane-arm64.tar" "$RUNNER_TEMP/pvlane-artifact/pvlane-arm64.tar"
           cd "$RUNNER_TEMP/pvlane-artifact"
-          sha256sum pvlane-arm64.tar.gz > pvlane-arm64.tar.gz.sha256
+          sha256sum pvlane-arm64.tar > pvlane-arm64.tar.sha256
 
       - name: Upload image for download
         uses: actions/upload-artifact@v4
