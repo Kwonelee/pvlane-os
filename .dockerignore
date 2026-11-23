@@ -1,3 +1,4 @@
+# Keep test-fixtures: tsc also checks src/*.test.ts.
 .git
 .github
 node_modules
