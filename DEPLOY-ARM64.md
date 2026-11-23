@@ -13,6 +13,9 @@ GitHub Actions 构建后提供镜像文件下载，不向 Docker Hub 或 GHCR �
 - nginx.conf：静态资源、SPA 回退与 PDF.js .mjs MIME 类型。
 - .github/workflows/docker.yml：构建 ARM64 镜像并上传为 Actions Artifact。
 - compose.yaml：可选，复制到 ARM64 服务器后运行本地导入的镜像。
+- index.html：替换项目入口，通过 bootstrap.ts 先加载兼容实现。
+- src/bootstrap.ts、src/crypto-compat.ts：新增文件，修复局域网 HTTP 下因
+  crypto.randomUUID 不可用而白屏的问题；已有原生实现的浏览器保持使用原生实现。
 
 DEPLOY-ARM64.md 是说明文件，不参与构建。
 无需修改 package.json、vite.config.ts 或 package-lock.json。
@@ -70,6 +73,8 @@ docker run -d --name pvlane --pull=never --restart unless-stopped -p 8080:80 pvl
 ```
 
 访问 http://服务器IP:8080 可初步检查页面能否加载。
+本配置已加入 UUID 兼容实现，可在局域网 HTTP 下初始化页面，使用 getRandomValues
+生成 UUID v4，不依赖 Math.random。此兼容实现不提供 showSaveFilePicker。
 正式使用请在前置反向代理上配置受浏览器信任的 HTTPS，并代理到容器的 80 端口。
 本示例的 Nginx 配置本身不包含 HTTPS 证书和 TLS 监听。
 
@@ -126,3 +131,7 @@ docker compose logs --tail=50
 已使用失败构建对应的提交 9ca853e0f4dfa8c0f585dbeae2275bfd4085a549，
 在本地 Windows / Node.js 24 环境执行 npm ci 和 npm run build，TypeScript 检查与
 Vite 生产构建均通过。当前环境没有 Docker，尚未验证完整镜像构建或新的 GitHub Actions 运行。
+
+加入 UUID 兼容实现后，已再次通过 npm run build，并在模拟的 HTTP 环境中检查
+10000 个 UUID 的格式、唯一性、版本位和变体位，以及保留原生实现的行为。
+尚未在用户的飞牛设备上实测。
