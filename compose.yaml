@@ -1,0 +1,7 @@
+services:
+  pvlane:
+    image: ghcr.io/qinzeiwang/pvlane-os:latest
+    platform: linux/arm64
+    ports:
+      - "8080:80"
+    restart: unless-stopped
