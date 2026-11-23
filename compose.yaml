@@ -1,6 +1,7 @@
 services:
   pvlane:
-    image: ghcr.io/qinzeiwang/pvlane-os:latest
+    image: pvlane:arm64
+    pull_policy: never
     platform: linux/arm64
     ports:
       - "8080:80"
