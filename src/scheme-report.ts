@@ -1,3 +1,4 @@
+import { downloadBlob } from './download-file';
 import {locationNote,locationResolved} from './location-presets';
 import type {SunSettings} from './sun-position';
 import {projectStatistics} from './project-statistics';
@@ -17,9 +18,13 @@ export function schemeReport(name:string,roofs:RoofDesign[],edge:number,picture:
 export async function downloadScheme(html:string,name:string){
  if(window.pvlaneDesktop)return (await window.pvlaneDesktop.saveFile('report',`${name||'光伏方案'}-方案报告.html`,html))!==null;
  const picker=(window as unknown as {showSaveFilePicker?:(options:unknown)=>Promise<{createWritable:()=>Promise<{write:(data:Blob)=>Promise<void>;close:()=>Promise<void>}>}>}).showSaveFilePicker;
- if(!picker)throw new Error('当前浏览器不支持选择保存位置，请在 Chrome 或 Edge 中下载报告。');
+ const suggestedName=(name.replace(/[\\/:*?"<>|]/g,'_')||'光伏方案')+'-方案报告.html';
+ if(typeof picker!=='function'){
+  downloadBlob(new Blob([html],{type:'text/html;charset=utf-8'}),suggestedName);
+  return true;
+ }
  try{
-  const handle=await picker.call(window,{suggestedName:(name.replace(/[\\/:*?"<>|]/g,'_')||'光伏方案')+'-方案报告.html',types:[{description:'方案报告 HTML',accept:{'text/html':['.html']}}],excludeAcceptAllOption:true});
+  const handle=await picker.call(window,{suggestedName,types:[{description:'方案报告 HTML',accept:{'text/html':['.html']}}],excludeAcceptAllOption:true});
   const file=await handle.createWritable();await file.write(new Blob([html],{type:'text/html;charset=utf-8'}));await file.close();return true;
  }catch(e){if(e instanceof DOMException&&e.name==='AbortError')return false;throw e;}
 }

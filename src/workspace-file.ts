@@ -1,3 +1,4 @@
+import { downloadBlob } from './download-file';
 import {parseSunSettings,type SunSettings} from './sun-position';
 import {restoreProjectLocation,ignoresShadows} from './location-presets';
 import {parseImageOverlays,type ImageOverlay} from './image-overlays';
@@ -59,8 +60,11 @@ type SaveHandle={name:string;createWritable:()=>Promise<{write:(data:Blob)=>Prom
 export async function downloadWorkspace(p:WorkspaceFile):Promise<string|null>{
  if(window.pvlaneDesktop)return window.pvlaneDesktop.saveFile('project',`${p.name||'光伏方案'}.json`,JSON.stringify(p));
  const picker=(window as unknown as {showSaveFilePicker?:(options:unknown)=>Promise<SaveHandle>}).showSaveFilePicker;
- if(!picker)throw new Error('当前浏览器不支持选择保存位置，请在 Chrome 或 Edge 中打开本项目后保存。');
  const suggestedName=`${p.name.replace(/[\\/:*?"<>|]/g,'_')||'光伏方案'}.json`;
+ if(typeof picker!=='function'){
+  downloadBlob(new Blob([JSON.stringify(p)],{type:'application/json'}),suggestedName);
+  return suggestedName;
+ }
  try{
   const handle=await picker.call(window,{suggestedName,types:[{description:'光伏项目 JSON',accept:{'application/json':['.json']}}],excludeAcceptAllOption:true});
   const file=await handle.createWritable();

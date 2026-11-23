@@ -16,6 +16,10 @@ GitHub Actions 构建后提供镜像文件下载，不向 Docker Hub 或 GHCR �
 - index.html：替换项目入口，通过 bootstrap.ts 先加载兼容实现。
 - src/bootstrap.ts、src/crypto-compat.ts：新增文件，修复局域网 HTTP 下因
   crypto.randomUUID 不可用而白屏的问题；已有原生实现的浏览器保持使用原生实现。
+- src/download-file.ts：新增普通浏览器下载方式，兼容 HTTP。
+- src/workspace-file.ts、src/scheme-report.ts、src/main.tsx：替换现有文件，启用项目和
+  报告下载，并调整提示和新建项目流程。
+- src/download-file.test.ts、src/workspace-save.test.ts：新增或替换相关回归测试。
 
 DEPLOY-ARM64.md 是说明文件，不参与构建。
 无需修改 package.json、vite.config.ts 或 package-lock.json。
@@ -72,15 +76,22 @@ docker compose up -d --pull never
 docker run -d --name pvlane --pull=never --restart unless-stopped -p 8080:80 pvlane:arm64
 ```
 
-访问 http://服务器IP:8080 可初步检查页面能否加载。
-本配置已加入 UUID 兼容实现，可在局域网 HTTP 下初始化页面，使用 getRandomValues
-生成 UUID v4，不依赖 Math.random。此兼容实现不提供 showSaveFilePicker。
-正式使用请在前置反向代理上配置受浏览器信任的 HTTPS，并代理到容器的 80 端口。
-本示例的 Nginx 配置本身不包含 HTTPS 证书和 TLS 监听。
+访问 http://服务器IP:8080 即可使用页面、下载项目 JSON 和 HTML 报告。
+本配置已加入 UUID 兼容实现，使用 getRandomValues 生成 UUID v4，不依赖 Math.random。
 
-项目源码使用 showSaveFilePicker 保存项目 JSON 和报告，需要 Chrome/Edge 和
-安全上下文。通过远程服务器或局域网 IP 的普通 HTTP 访问时，这些保存功能会不可用。
-localhost 的 HTTP 通常可作为本机调试例外。
+局域网 HTTP 下不提供 showSaveFilePicker，因此点击保存会发起普通浏览器下载。
+保存目录由浏览器下载设置决定；如需每次选择位置，可在浏览器设置中打开“下载前询问
+每个文件的保存位置”。文件保存到操作浏览器的电脑，不会自动保存到飞牛设备上。
+HTML 报告下载后可打开，并通过“打印 / 保存为 PDF”生成 PDF。
+
+普通下载无法由网页确认是否真正保存成功，界面只提示“已发起下载”，请在浏览器下载
+记录中确认。在“新建项目”对话框中，HTTP 下载完成后不会自动清空当前项目；确认文件
+下载完成，再点击“不保存，新建”。
+
+HTTPS 下如浏览器支持 showSaveFilePicker，仍沿用原来的选择位置并写入文件流程；取消
+选择或写入失败不会额外发起下载。Electron 桌面版继续使用原有保存接口。
+如需 HTTPS，可在前置反向代理上配置受浏览器信任的证书，并代理到容器的 80 端口。
+本示例的 Nginx 配置本身不包含 HTTPS 证书和 TLS 监听。
 
 本项目使用 /pdfjs/... 绝对路径，请先部署在域名根路径；
 如需 /pvlane/ 子路径，需要额外调整 Vite base 和源码内的资源路径。
@@ -125,8 +136,8 @@ docker compose ps
 docker compose logs --tail=50
 ```
 
-镜像架构输出应为 linux/arm64。通过 HTTPS 在 Chrome/Edge 检查页面、3D、PDF 底图导入、
-项目保存和报告保存。项目 JSON 应保存到浏览器使用者本机。
+镜像架构输出应为 linux/arm64。通过 HTTP 在 Chrome/Edge 检查页面、3D、PDF 底图导入、
+项目下载、重新打开下载的项目以及报告下载。项目 JSON 应保存到浏览器使用者本机。
 
 已使用失败构建对应的提交 9ca853e0f4dfa8c0f585dbeae2275bfd4085a549，
 在本地 Windows / Node.js 24 环境执行 npm ci 和 npm run build，TypeScript 检查与
@@ -135,3 +146,6 @@ Vite 生产构建均通过。当前环境没有 Docker，尚未验证完整镜�
 加入 UUID 兼容实现后，已再次通过 npm run build，并在模拟的 HTTP 环境中检查
 10000 个 UUID 的格式、唯一性、版本位和变体位，以及保留原生实现的行为。
 尚未在用户的飞牛设备上实测。
+
+加入项目和报告的 HTTP 下载方式后，已通过 18 项相关测试，覆盖完整 JSON/HTML 内容、
+文件名处理、下载失败、原生选择器取消与错误、桌面版保存。npm run build 也已通过。

@@ -19,6 +19,3 @@ it('写入失败不会报告保存成功',async()=>{
  vi.stubGlobal('window',{showSaveFilePicker:async()=>({createWritable:async()=>({write:async()=>{throw new Error('磁盘写入失败');},close:vi.fn()})})});
  await expect(downloadWorkspace(project)).rejects.toThrow('磁盘写入失败');
 });
-it('不支持选择位置时明确提示，不静默下载',async()=>{
- vi.stubGlobal('window',{});await expect(downloadWorkspace(project)).rejects.toThrow('选择保存位置');
-});
